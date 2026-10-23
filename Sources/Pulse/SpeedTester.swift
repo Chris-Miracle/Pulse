@@ -92,6 +92,12 @@ final class SpeedTester: ObservableObject {
         liveMbps = 0
     }
 
+    /// Clears the last result and returns to the start screen.
+    func reset() {
+        cancel()
+        downloadMbps = nil; uploadMbps = nil; latencyMs = nil; jitterMs = nil
+    }
+
     private func run() async {
         do {
             phase = .latency

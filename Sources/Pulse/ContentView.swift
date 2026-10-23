@@ -124,7 +124,11 @@ struct ContentView: View {
                 .controlSize(.large)
 
             case .failed(let message):
-                Text(message).font(.callout).foregroundStyle(.secondary)
+                HStack(alignment: .top) {
+                    Text(message).font(.callout).foregroundStyle(.secondary)
+                    Spacer()
+                    dismissButton
+                }
                 Button { tester.start() } label: {
                     Text("Retry").frame(maxWidth: .infinity)
                 }
@@ -161,6 +165,18 @@ struct ContentView: View {
         }
     }
 
+    /// Small × that clears the result and goes back to the "Run speed test" button.
+    private var dismissButton: some View {
+        Button { tester.reset() } label: {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help("Close results")
+        .accessibilityLabel("Close results")
+    }
+
     private var resultsView: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -168,6 +184,8 @@ struct ContentView: View {
                     .font(.system(size: 44, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                 Text("Mbps").font(.callout).foregroundStyle(.secondary)
+                Spacer()
+                dismissButton
             }
             HStack {
                 stat("Upload", mbps(tester.uploadMbps), "Mbps")

@@ -4,18 +4,72 @@ import ServiceManagement
 struct ContentView: View {
     @EnvironmentObject var monitor: NetworkMonitor
     @EnvironmentObject var tester: SpeedTester
+    @EnvironmentObject var watcher: ConnectionWatcher
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            statusRow
             liveSection
             Divider()
             speedTestSection
+            Divider()
+            alertsSection
             Divider()
             footer
         }
         .padding(18)
         .frame(width: 300)
+        .onChange(of: tester.phase) { phase in
+            watcher.paused = tester.isRunning
+            if phase == .done { watcher.speedTestFinished(downloadMbps: tester.downloadMbps) }
+        }
+    }
+
+    // MARK: Connection status
+
+    private var statusRow: some View {
+        HStack(spacing: 6) {
+            Circle().fill(statusColor).frame(width: 8, height: 8)
+            Text(watcher.statusLabel).font(.caption.weight(.medium))
+            if let ms = watcher.latencyMs, watcher.status != .offline {
+                Text(String(format: "· %.0f ms", ms))
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            }
+            Spacer()
+        }
+    }
+
+    private var statusColor: Color {
+        switch watcher.status {
+        case .online: return .green
+        case .slow: return .orange
+        case .offline: return .red
+        case .unknown: return .gray
+        }
+    }
+
+    // MARK: Alerts
+
+    private var alertsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle("Notify when network is slow or down", isOn: $watcher.notificationsEnabled)
+                .toggleStyle(.checkbox)
+                .font(.caption)
+            if watcher.notificationsEnabled {
+                Picker("Slow if latency over", selection: $watcher.slowLatencyMs) {
+                    ForEach(ConnectionWatcher.latencyChoices, id: \.self) { Text("\(Int($0)) ms").tag($0) }
+                }
+                .font(.caption)
+                Picker("Speed test alert below", selection: $watcher.slowSpeedMbps) {
+                    ForEach(ConnectionWatcher.speedChoices, id: \.self) { Text("\(Int($0)) Mbps").tag($0) }
+                }
+                .font(.caption)
+                Button("Send test notification") { watcher.sendTestNotification() }
+                    .buttonStyle(.link)
+                    .font(.caption)
+            }
+        }
     }
 
     // MARK: Live usage

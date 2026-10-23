@@ -5,6 +5,7 @@ let package = Package(
     name: "Pulse",
     platforms: [.macOS(.v13)],
     targets: [
-        .executableTarget(name: "Pulse", path: "Sources/Pulse")
+        .executableTarget(name: "Pulse", path: "Sources/Pulse"),
+        .testTarget(name: "PulseTests", dependencies: ["Pulse"], path: "Tests/PulseTests"),
     ]
 )

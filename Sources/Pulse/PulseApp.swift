@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct PulseApp: App {
@@ -9,6 +10,18 @@ struct PulseApp: App {
     init() {
         // Menu bar only; also covers `swift run`, where there's no Info.plist LSUIElement
         NSApplication.shared.setActivationPolicy(.accessory)
+
+        // Troubleshooting: `open -a Pulse --args --notification-check` sends a test alert and logs the settings
+        if CommandLine.arguments.contains("--notification-check") {
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                Notifier.shared.requestAuthorization()
+                Notifier.shared.send(title: "Pulse test", body: "If you see this banner, notifications work.")
+                let s = await UNUserNotificationCenter.current().notificationSettings()
+                NSLog("PulseNotificationCheck auth=%d alertStyle=%d alert=%d", s.authorizationStatus.rawValue,
+                      s.alertStyle.rawValue, s.alertSetting.rawValue)
+            }
+        }
     }
 
     var body: some Scene {

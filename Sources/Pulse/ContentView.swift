@@ -20,6 +20,7 @@ struct ContentView: View {
         }
         .padding(18)
         .frame(width: 300)
+        .onAppear { watcher.refreshNotificationSettings() }
         .onChange(of: tester.phase) { phase in
             watcher.paused = tester.isRunning
             if phase == .done { watcher.speedTestFinished(downloadMbps: tester.downloadMbps) }
@@ -68,6 +69,9 @@ struct ContentView: View {
                 Button("Send test notification") { watcher.sendTestNotification() }
                     .buttonStyle(.link)
                     .font(.caption)
+                if let problem = watcher.notificationProblem {
+                    notificationWarning(problem)
+                }
             }
         }
     }
@@ -162,6 +166,23 @@ struct ContentView: View {
         case .download: return "Testing download…"
         case .upload: return "Testing upload…"
         default: return ""
+        }
+    }
+
+    private func notificationWarning(_ problem: Notifier.Problem) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(problem == .denied
+                  ? "Notifications are turned off for Pulse."
+                  : "Pulse alerts are set to \"None\", so they only appear in Notification Center.",
+                  systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .fixedSize(horizontal: false, vertical: true)
+            Button(problem == .denied ? "Turn on in System Settings" : "Set to Banners in System Settings") {
+                Notifier.openSettings()
+            }
+            .buttonStyle(.link)
+            .font(.caption)
         }
     }
 

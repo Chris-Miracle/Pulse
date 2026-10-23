@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import UserNotifications
+import AppKit
 
 /// Watches connectivity and latency in the background and sends notifications when the network goes down,
 /// gets slow, or recovers.
@@ -94,9 +95,20 @@ final class ConnectionWatcher: ObservableObject {
                String(format: "Speed test measured %.1f Mbps (below your %.0f Mbps alert).", down, slowSpeedMbps))
     }
 
+    /// Set when macOS settings stop Pulse's banners from appearing.
+    @Published private(set) var notificationProblem: Notifier.Problem?
+
     func sendTestNotification() {
         Notifier.shared.send(title: "Pulse notifications are on",
                              body: "You'll be alerted when your network is slow or down.")
+        refreshNotificationSettings()
+    }
+
+    func refreshNotificationSettings() {
+        Task {
+            let p = await Notifier.shared.checkProblem()
+            notificationProblem = p
+        }
     }
 
     // MARK: - Internals
@@ -167,6 +179,12 @@ final class ConnectionWatcher: ObservableObject {
 final class Notifier: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
     static let shared = Notifier()
 
+    /// Why banners won't appear, if macOS settings are blocking them.
+    enum Problem: Equatable {
+        case denied        // notifications turned off for Pulse
+        case noBanners     // allowed, but style is "None", so they only land in Notification Center
+    }
+
     private var center: UNUserNotificationCenter? {
         Bundle.main.bundleIdentifier == nil ? nil : UNUserNotificationCenter.current()
     }
@@ -182,18 +200,44 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate, @unchecked Sen
             print("[notification] \(title): \(body)")
             return
         }
+        center.delegate = self
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
-        // Same identifier replaces the previous alert instead of stacking a pile of them
-        let req = UNNotificationRequest(identifier: "pulse.status", content: content, trigger: nil)
+        // Clear the old alert so they don't pile up, then post with a fresh ID.
+        // Reusing one ID makes macOS update the old entry silently instead of showing a banner.
+        center.removeAllDeliveredNotifications()
+        let req = UNNotificationRequest(identifier: "pulse.\(UUID().uuidString)", content: content, trigger: nil)
         center.add(req)
+    }
+
+    /// Checks the user's notification settings for Pulse.
+    func checkProblem() async -> Problem? {
+        guard let center else { return nil }
+        let s = await center.notificationSettings()
+        switch s.authorizationStatus {
+        case .denied: return .denied
+        case .notDetermined: return nil
+        default: return s.alertStyle == .none ? .noBanners : nil
+        }
+    }
+
+    /// Opens System Settings at Pulse's notification page.
+    static func openSettings() {
+        let id = Bundle.main.bundleIdentifier ?? "com.chris.pulse"
+        let urls = [
+            "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)",
+            "x-apple.systempreferences:com.apple.preference.notifications",
+        ]
+        for u in urls {
+            if let url = URL(string: u), NSWorkspace.shared.open(url) { return }
+        }
     }
 
     // Show banners even while the menu bar popover is open
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([.banner, .sound])
+        completionHandler([.banner, .list, .sound])
     }
 }

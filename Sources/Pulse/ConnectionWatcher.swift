@@ -91,8 +91,10 @@ final class ConnectionWatcher: ObservableObject {
     /// Called when a manual speed test finishes.
     func speedTestFinished(downloadMbps: Double?) {
         guard let down = downloadMbps, down < slowSpeedMbps else { return }
+        let bits = UserDefaults.standard.bool(forKey: "useBits")
         notify("Slow download speed",
-               String(format: "Speed test measured %.1f Mbps (below your %.0f Mbps alert).", down, slowSpeedMbps))
+               "Speed test measured \(NetworkMonitor.formatSpeed(mbps: down, bits: bits)) " +
+               "(below your \(NetworkMonitor.formatSpeed(mbps: slowSpeedMbps, bits: bits)) alert).")
     }
 
     /// Set when macOS settings stop Pulse's banners from appearing.

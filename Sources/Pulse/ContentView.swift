@@ -63,7 +63,7 @@ struct ContentView: View {
                 }
                 .font(.caption)
                 Picker("Speed test alert below", selection: $watcher.slowSpeedMbps) {
-                    ForEach(ConnectionWatcher.speedChoices, id: \.self) { Text("\(Int($0)) Mbps").tag($0) }
+                    ForEach(ConnectionWatcher.speedChoices, id: \.self) { Text(NetworkMonitor.formatSpeed(mbps: $0, bits: monitor.useBits)).tag($0) }
                 }
                 .font(.caption)
                 Button("Send test notification") { watcher.sendTestNotification() }
@@ -148,10 +148,11 @@ struct ContentView: View {
                 ProgressView().controlSize(.small)
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(String(format: "%.1f", tester.liveMbps))
+                    let live = speed(tester.liveMbps)
+                    Text(live.value)
                         .font(.system(size: 40, weight: .semibold, design: .rounded))
                         .monospacedDigit()
-                    Text("Mbps").font(.callout).foregroundStyle(.secondary)
+                    Text(live.unit).font(.callout).foregroundStyle(.secondary)
                 }
             }
             Button("Cancel") { tester.cancel() }
@@ -201,15 +202,17 @@ struct ContentView: View {
     private var resultsView: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(mbps(tester.downloadMbps))
+                let down = speed(tester.downloadMbps)
+                Text(down.value)
                     .font(.system(size: 44, weight: .semibold, design: .rounded))
                     .monospacedDigit()
-                Text("Mbps").font(.callout).foregroundStyle(.secondary)
+                Text(down.unit).font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 dismissButton
             }
             HStack {
-                stat("Upload", mbps(tester.uploadMbps), "Mbps")
+                let up = speed(tester.uploadMbps)
+                stat("Upload", up.value, up.unit)
                 Spacer()
                 stat("Latency", ms(tester.latencyMs), "ms")
                 Spacer()
@@ -228,9 +231,9 @@ struct ContentView: View {
         }
     }
 
-    private func mbps(_ v: Double?) -> String {
-        guard let v else { return "–" }
-        return v >= 100 ? String(format: "%.0f", v) : String(format: "%.1f", v)
+    /// Speed test values follow the "Show in bits" toggle (Mbps or MB/s).
+    private func speed(_ mbps: Double?) -> (value: String, unit: String) {
+        NetworkMonitor.speedParts(mbps: mbps, bits: monitor.useBits)
     }
 
     private func ms(_ v: Double?) -> String {
@@ -243,7 +246,7 @@ struct ContentView: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Session  ↓ \(NetworkMonitor.formatBytes(monitor.sessionDown))  ↑ \(NetworkMonitor.formatBytes(monitor.sessionUp))")
+                Text("Session  ↓ \(NetworkMonitor.formatTotal(monitor.sessionDown, bits: monitor.useBits))  ↑ \(NetworkMonitor.formatTotal(monitor.sessionUp, bits: monitor.useBits))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()

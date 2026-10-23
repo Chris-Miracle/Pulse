@@ -120,7 +120,42 @@ final class NetworkMonitor: ObservableObject {
         return "\(p.value) \(p.unit)"
     }
 
-    static func formatBytes(_ n: UInt64) -> String {
-        ByteCountFormatter.string(fromByteCount: Int64(n), countStyle: .decimal)
+    /// Data totals (session counters): bytes as "1.2 GB", or bits as "9.6 Gb" (1 byte = 8 bits).
+    static func formatTotal(_ n: UInt64, bits: Bool) -> String {
+        guard bits else {
+            return ByteCountFormatter.string(fromByteCount: Int64(n), countStyle: .decimal)
+        }
+        let b = Double(n) * 8
+        switch b {
+        case 1e12...: return String(format: "%.2f Tb", b / 1e12)
+        case 1e9...:  return String(format: "%.2f Gb", b / 1e9)
+        case 1e6...:  return String(format: "%.1f Mb", b / 1e6)
+        case 1e3...:  return String(format: "%.0f Kb", b / 1e3)
+        default:      return String(format: "%.0f b", b)
+        }
+    }
+
+    /// Speed test results arrive in Mbps; show them as Mbps or MB/s to match the toggle.
+    static func speedParts(mbps: Double?, bits: Bool) -> (value: String, unit: String) {
+        let unit = bits ? "Mbps" : "MB/s"
+        guard let mbps else { return ("–", unit) }
+        let v = bits ? mbps : mbps / 8
+        return (trimmed(v), unit)
+    }
+
+    static func formatSpeed(mbps: Double, bits: Bool) -> String {
+        let p = speedParts(mbps: mbps, bits: bits)
+        return "\(p.value) \(p.unit)"
+    }
+
+    /// Fewer decimals for bigger numbers: 340, 42.5, 1.25.
+    private static func trimmed(_ v: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.usesGroupingSeparator = false
+        f.minimumFractionDigits = 0
+        f.maximumFractionDigits = v >= 100 ? 0 : (v >= 10 ? 1 : 2)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f.string(from: NSNumber(value: v)) ?? String(format: "%.1f", v)
     }
 }

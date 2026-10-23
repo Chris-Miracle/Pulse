@@ -12,6 +12,8 @@ A macOS menu bar app that shows live network throughput and runs speed tests (vi
 
 Requires macOS 13+ and Swift 5.9+.
 
+The app icon is drawn by `scripts/make-icon.swift`. To regenerate it, run `swift scripts/make-icon.swift Resources/AppIcon.png` and rebuild the `.icns` with `iconutil`.
+
 ## Notifications
 
 Pulse alerts you when your network is **down**, **slow**, or **recovers**:

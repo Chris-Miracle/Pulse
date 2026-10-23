@@ -37,3 +37,7 @@ Settings are in the popover under "Notify when network is slow or down". Notific
 ```bash
 swift test
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).

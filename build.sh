@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 # Builds Pulse.app (menu bar only, no Dock icon).
-# Usage: ./build.sh [--install] [--run]
+# Usage: ./build.sh [--universal] [--zip] [--install] [--run]
+#   --universal  build for both Apple Silicon and Intel Macs
+#   --zip        also create build/Pulse.zip for sharing
 set -euo pipefail
 cd "$(dirname "$0")"
 
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Pulse"
+if [[ " $* " == *" --universal "* ]]; then
+    ARCHS=(--arch arm64 --arch x86_64)
+else
+    ARCHS=()
+fi
+swift build -c release ${ARCHS[@]+"${ARCHS[@]}"}
+BIN="$(swift build -c release ${ARCHS[@]+"${ARCHS[@]}"} --show-bin-path)/Pulse"
 
 APP="build/Pulse.app"
 rm -rf "$APP"
@@ -36,7 +43,14 @@ PLIST
 # Ad-hoc sign so macOS lets it run (and "Launch at login" can register)
 codesign --force --sign - "$APP"
 
-echo "Built $APP"
+echo "Built $APP ($(lipo -archs "$APP/Contents/MacOS/Pulse"))"
+
+if [[ " $* " == *" --zip "* ]]; then
+    rm -f build/Pulse.zip
+    # ditto keeps the bundle's signature and metadata intact, unlike plain zip
+    ditto -c -k --keepParent "$APP" build/Pulse.zip
+    echo "Zipped build/Pulse.zip"
+fi
 
 if [[ " $* " == *" --install "* ]]; then
     rm -rf /Applications/Pulse.app

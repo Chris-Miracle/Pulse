@@ -2,12 +2,19 @@
 
 A macOS menu bar app that shows live network throughput and runs speed tests (via speed.cloudflare.com).
 
+## Download
+
+Get the latest **Pulse.zip** from [Releases](https://github.com/Chris-Miracle/Pulse/releases/latest). It runs on Apple Silicon and Intel Macs (macOS 13+).
+
+Unzip it, drag Pulse.app to Applications, and open it. The first time, macOS blocks it because it isn't signed with a paid Apple developer account: go to **System Settings → Privacy & Security** and click **Open Anyway**.
+
 ## Build
 
 ```bash
 ./build.sh            # builds build/Pulse.app
 ./build.sh --install  # copies to /Applications
 ./build.sh --run      # builds and launches
+./build.sh --universal --zip  # Apple Silicon + Intel build, zipped for sharing
 ```
 
 Requires macOS 13+ and Swift 5.9+.
